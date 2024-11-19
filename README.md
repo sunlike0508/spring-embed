@@ -45,7 +45,35 @@
 
 ## 내장 톰캣1 - 설정
 
+```groovy
+dependencies {
+    implementation 'org.apache.tomcat.embed:tomcat-embed-core:10.1.5'
+}
 
+//일반 Jar 생성
+task buildJar(type: Jar) {
+  manifest {
+    attributes 'Main-Class': 'hello.embed.EmbedTomcatSpringMain'
+  }
+  with jar
+}
+
+//Fat Jar 생성
+task buildFatJar(type: Jar) {
+  manifest {
+    attributes 'Main-Class': 'hello.embed.EmbedTomcatSpringMain'
+  }
+  duplicatesStrategy = DuplicatesStrategy.WARN
+  from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+  with jar
+}
+```
+
+`tomcat-embed-core` : 톰캣 라이브러리이다. 톰캣을 라이브러리로 포함해서 톰캣 서버를 자바 코드로 실행할 수 있다. 서블릿 관련 코드도 포함하고 있다.
+
+`buildJar` , `buildFatJar` 관련된 부분은 뒤에서 다시 설명한다.
+
+## 내장 톰캣2 - 서블릿
 
 
 
