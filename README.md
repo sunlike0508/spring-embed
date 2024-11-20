@@ -75,6 +75,108 @@ task buildFatJar(type: Jar) {
 
 ## 내장 톰캣2 - 서블릿
 
+이제 본격적으로 내장 톰캣을 사용해보자. 
+
+내장 톰캣은 쉽게 이야기해서 톰캣을 라이브러리로 포함하고 자바 코드로 직접 실행하는 것이다
+
+```java
+public class EmbedTomcatServletMain {
+
+    public static void main(String[] args) throws LifecycleException {
+        System.out.println("EmbedTomcatServletMain.main");
+
+        Tomcat tomcat = new Tomcat();
+        Connector connector = new Connector();
+        connector.setPort(8080);
+        tomcat.setConnector(connector);
+
+        //서블릿 등록
+        Context context = tomcat.addContext("", "/");
+        tomcat.addServlet("", "helloServlet", new HelloServlet());
+        context.addServletMappingDecoded("/hello-servlet", "helloServlet");
+        tomcat.start();
+    }
+}
+```
+
+
+**실행**
+
+`EmbedTomcatServletMain.main()` 메서드를 실행하자.
+
+http://localhost:8080/hello-servlet
+
+**참고**
+
+내장 톰캣을 개발자가 직접 다룰일은 거의 없다. 
+
+스프링 부트에서 내장 톰캣 관련된 부분을 거의 대부분 자동화해서 제공하기 때문에 내장 톰캣을 깊이있게 학습하는 것은 권장하지 않는다.(백엔드 개발자는 이미 공부해야 할 것이 너무 많다.)
+
+내장 톰캣이 어떤 방식으로 동작하는지 그 원리를 대략 이해하는 정도면 충분하다.
+
+## 내장 톰캣3 - 스프링
+
+```java
+public class EmbedTomcatSpringMain {
+
+  public static void main(String[] args) throws LifecycleException {
+    System.out.println("EmbedTomcatSpringMain.main");
+
+    Tomcat tomcat = new Tomcat();
+    Connector connector = new Connector();
+    connector.setPort(8080);
+    tomcat.setConnector(connector);
+
+    //스프링 컨테이너 생성
+    AnnotationConfigWebApplicationContext appContext = new AnnotationConfigWebApplicationContext();
+    appContext.register(HelloConfig.class);
+
+    //스프링 MVC 디스패처 서블릿 생성, 스프링 컨테이너 연결 : 이렇게 하면 서블릿이 스프링 컨테이너에 있는 controller를 찾아 연결시켜줌
+    DispatcherServlet dispatcherServlet = new DispatcherServlet(appContext);
+
+    //디스패처 서블릿 등록
+    //위에서 만든 서블릿을 서블릿 컨테이너에 넣는다.
+    Context context = tomcat.addContext("", "/");
+    tomcat.addServlet("", "dispatcher", dispatcherServlet);
+    context.addServletMappingDecoded("/", "dispatcher");
+
+    tomcat.start();
+  }
+}
+```
+
+* `main()` 메서드를 실행하면 다음과 같이 동작한다.
+* 내장 톰캣을 생성해서 `8080` 포트로 연결하도록 설정한다.
+* 스프링 컨테이너를 만들고 필요한 빈을 등록한다.
+* 스프링 MVC 디스패처 서블릿을 만들고 앞서 만든 스프링 컨테이너에 연결한다. 디스패처 서블릿을 내장 톰캣에 등록한다.
+* 내장 톰캣을 실행한다.
+
+**실행**
+
+`EmbedTomcatSpringMain.main()` 메서드를 실행하자.
+
+http://localhost:8080/hello-spring
+
+코드를 보면 알겠지만, 서블릿 컨테이너 초기화와 거의 같은 코드이다.
+
+다만 시작점이 개발자가 `main()` 메서드를 직접 실행하는가, 서블릿 컨테이너가 제공하는 초기화 메서드를 통해서 실행하는가의 차이가 있을 뿐이다.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
