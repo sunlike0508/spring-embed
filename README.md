@@ -161,23 +161,112 @@ http://localhost:8080/hello-spring
 
 다만 시작점이 개발자가 `main()` 메서드를 직접 실행하는가, 서블릿 컨테이너가 제공하는 초기화 메서드를 통해서 실행하는가의 차이가 있을 뿐이다.
 
+## 내장 톰캣4 - 빌드와 배포1
+
+이번에는 애플리케이션에 내장 톰캣을 라이브러리로 포함했다. 이 코드를 어떻게 빌드하고 배포하는지 알아보자.
+
+자바의 `main()` 메서드를 실행하기 위해서는 `jar` 형식으로 빌드해야 한다.
+
+그리고 `jar` 안에는 `META-INF/MANIFEST.MF` 파일에 실행할 `main()` 메서드의 클래스를 지정해주어야 한다.
+
+`META-INF/MANIFEST.MF` 
+
+```
+Manifest-Version: 1.0
+Main-Class: hello.embed.EmbedTomcatSpringMain
+```
+Gradle의 도움을 받으면 이 과정을 쉽게 진행할 수 있다. 다음 코드를 참고하자. 
+
+`build.gradle - buildJar` 참고
+
+```groovy
+task buildJar(type: Jar) {
+  manifest {
+    attributes 'Main-Class': 'hello.embed.EmbedTomcatSpringMain'
+  }
+  with jar
+}
+```
+
+해당 코드는 `embed-start` 에서 포함해두었다.
+
+다음과 같이 실행하자. 
+
+**jar 빌드**
+
+```shell
+./gradlew clean buildJar
+```
+
+다음 위치에 `jar` 파일이 만들어졌을 것이다. `build/libs/embed-0.0.1-SNAPSHOT.jar`
+
+**jar 파일 실행**
+
+`jar` 파일이 있는 폴더로 이동한 후에 다음 명령어로 `jar` 파일을 실행해보자. 
+
+```shell
+java -jar embed-0.0.1-SNAPSHOT.jar
+```
+
+**실행 결과**
+
+```shell
+... % java -jar embed-0.0.1-SNAPSHOT.jar
+Error: Unable to initialize main class hello.embed.EmbedTomcatSpringMain
+Caused by: java.lang.NoClassDefFoundError: org/springframework/web/context/WebApplicationContext
+```
+실행 결과를 보면 기대했던 내장 톰캣 서버가 실행되는 것이 아니라, 오류가 발생하는 것을 확인할 수 있다. 
+
+오류 메시지를 잘 읽어보면 스프링 관련 클래스를 찾을 수 없다는 오류이다.
+
+무엇이 문제일까?
+
+문제를 확인하기 위해 `jar` 파일의 압축을 풀어보자. 
+
+**jar 압축 풀기**
+
+우리가 빌드한 jar 파일의 압축을 풀어서 내용물을 확인해보자. 
+
+`build/libs` 폴더로 이동하자.
+
+다음 명령어를 사용해서 압축을 풀자
+
+```shell
+jar -xvf embed-0.0.1-SNAPSHOT.jar
+```
 
 
+JAR를 푼 결과를 보면 스프링 라이브러리나 내장 톰캣 라이브러리가 전혀 보이지 않는다. 
 
+따라서 해당 오류가 발생한 것이다.
 
+과거에 WAR 파일을 풀어본 기억을 떠올려보자.
 
+**WAR를 푼 결과**
+* `WEB-INF`
+  * `classes` 
+    * `hello/servlet/TestServlet.class`
+  * `lib`
+    * `jakarta.servlet-api-6.0.0.jar`
+* `index.html`
 
+WAR는 분명 내부에 라이브러리 역할을 하는 `jar` 파일을 포함하고 있었다.
 
+**jar 파일은 jar파일을 포함할 수 없다.**
 
+WAR와 다르게 JAR 파일은 내부에 라이브러리 역할을 하는 JAR 파일을 포함할 수 없다. 
 
+포함한다고 해도 인식이 안된다. 이것이 JAR 파일 스펙의 한계이다. 
 
+그렇다고 WAR를 사용할 수 도 없다. 
 
+WAR는 웹 애플리케이션 서버(WAS) 위에서만 실행할 수 있다.
 
+대안으로는 라이브러리 jar 파일을 모두 구해서 MANIFEST 파일에 해당 경로를 적어주면 인식이 되지만 매우 번거롭고, Jar 파일안에 Jar 파일을 포함할 수 없기 때문에 라이브러리 역할을 하는 jar 파일도 항상 함께 가지고 다녀야 한다. 
 
+이 방법은 권장하기 않기 때문에 따로 설명하지 않는다.
 
-
-
-
+## 내장 톰캣5 - 빌드와 배포2
 
 
 
