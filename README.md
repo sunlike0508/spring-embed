@@ -235,6 +235,7 @@ Caused by: java.lang.NoClassDefFoundError: org/springframework/web/context/WebAp
 jar -xvf embed-0.0.1-SNAPSHOT.jar
 ```
 
+<img width="393" alt="Screenshot 2024-11-21 at 23 28 09" src="https://github.com/user-attachments/assets/6f79d4c1-af7a-47c7-884d-5c6250bf46a8">
 
 JAR를 푼 결과를 보면 스프링 라이브러리나 내장 톰캣 라이브러리가 전혀 보이지 않는다. 
 
