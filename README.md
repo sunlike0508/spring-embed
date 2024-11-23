@@ -269,6 +269,135 @@ WAR는 웹 애플리케이션 서버(WAS) 위에서만 실행할 수 있다.
 
 ## 내장 톰캣5 - 빌드와 배포2
 
+FatJar
+
+대안으로는 `fat jar` 또는 `uber jar` 라고 불리는 방법이다.
+
+Jar 안에는 Jar를 포함할 수 없다. 하지만 클래스는 얼마든지 포함할 수 있다.
+
+라이브러리에 사용되는 `jar` 를 풀면 `class` 들이 나온다. 
+
+이 `class` 를 뽑아서 새로 만드는 `jar` 에 포함하는 것이다. 
+
+이렇게 하면 수 많은 라이브러리에서 나오는 `class` 때문에 뚱뚱한(fat) `jar` 가 탄생한다. 
+
+그래서 `Fat Jar` 라고 부르는 것이다.
+
+```groovy
+//Fat Jar 생성
+task buildFatJar(type: Jar) {
+    manifest {
+        attributes 'Main-Class': 'hello.embed.EmbedTomcatSpringMain'
+    }
+    duplicatesStrategy = DuplicatesStrategy.WARN
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+```
+
+**jar 빌드**
+
+```shell
+./gradlew clean buildFatJar
+```
+
+빌드시 `Encountered duplicate path` 경고가 나올 수 있는데 이 부분은 무시하자
+
+다음 위치에 `jar` 파일이 만들어졌을 것이다. 
+
+`build/libs/embed-0.0.1-SNAPSHOT.jar`
+
+용량을 확인해보면 `10M` 이상의 상당히 큰 사이즈가 나왔다.
+
+**jar 파일 실행**
+
+`jar` 파일이 있는 폴더로 이동한 후에 다음 명령어로 `jar` 파일을 실행해보자. 
+
+```shell
+java -jar embed-0.0.1-SNAPSHOT.jar
+```
+
+```shell
+➜  libs git:(main) ✗ java -jar spring-embed-0.0.1-SNAPSHOT.jar
+EmbedTomcatSpringMain.main
+Nov 23, 2024 11:12:58 PM org.apache.coyote.AbstractProtocol init
+INFO: Initializing ProtocolHandler ["http-nio-8080"]
+Nov 23, 2024 11:12:58 PM org.apache.catalina.core.StandardService startInternal
+INFO: Starting service [Tomcat]
+Nov 23, 2024 11:12:58 PM org.apache.catalina.core.StandardEngine startInternal
+INFO: Starting Servlet engine: [Apache Tomcat/10.1.5]
+Nov 23, 2024 11:12:58 PM org.apache.coyote.AbstractProtocol start
+INFO: Starting ProtocolHandler ["http-nio-8080"]
+```
+
+http://localhost:8080/hello-spring
+
+드디어 정상 동작하는 것을 확인할 수 있다.
+
+Fat Jar의 정체를 확인하기 위해 `jar` 파일의 압축을 풀어보자. 
+
+**jar 압축 풀기**
+
+우리가 빌드한 jar 파일의 압축을 풀어서 내용물을 확인해보자. `build/libs` 폴더로 이동하자.
+
+다음 명령어를 사용해서 압축을 풀자
+
+```shell
+jar -xvf embed-0.0.1-SNAPSHOT.jar
+```
+
+Jar를 풀어보면 우리가 만든 클래스를 포함해서, 수 많은 라이브러리에서 제공되는 클래스들이 포함되어 있는 것을 확인할 수 있다.
+
+
+### Fat Jar 정리 
+
+**Fat Jar의 장점**
+
+Fat Jar 덕분에 하나의 jar 파일에 필요한 라이브러리들을 내장할 수 있게 되었다.
+
+내장 톰캣 라이브러리를 jar 내부에 내장할 수 있게 되었다.
+
+덕분에 하나의 jar 파일로 배포부터, 웹 서버 설치+실행까지 모든 것을 단순화 할 수 있다.
+
+이전에 살펴보았던 WAR를 외부 서버에 배포하는 방식의 단점을 다시 확인해보자.
+
+### **WAR 단점과 해결**
+
+* 톰캣 같은 WAS를 별도로 설치해야 한다.
+  * 해결: WAS를 별도로 설치하지 않아도 된다. 톰캣 같은 WAS가 라이브러리로 jar 내부에 포함되어 있다.
+* 개발 환경 설정이 복잡하다.
+  * 단순한 자바라면 별도의 설정을 고민하지 않고, `main()` 메서드만 실행하면 된다.
+  * 웹 애플리케이션은 WAS를 연동하기 위한 복잡한 설정이 들어간다.
+  * 해결: IDE에 복잡한 WAS 설정이 필요하지 않다. 단순히 `main()` 메서드만 실행하면 된다.
+* 배포 과정이 복잡하다. WAR를 만들고 이것을 또 WAS에 전달해서 배포해야 한다.
+  * 해결: 배포 과정이 단순하다. JAR를 만들고 이것을 원하는 위치에서 실행만 하면 된다.
+* 톰캣의 버전을 업데이트 하려면 톰캣을 다시 설치해야 한다.
+  * 해결: gradle에서 내장 톰캣 라이브러리 버전만 변경하고 빌드 후 실행하면 된다.
+
+### **Fat Jar의 단점**
+
+Fat Jar는 완벽해 보이지만 몇가지 단점을 여전히 포함하고 있다.
+
+* 어떤 라이브러리가 포함되어 있는지 확인하기 어렵다.
+  * 모두 `class` 로 풀려있으니 어떤 라이브러리가 사용되고 있는지 추적하기 어렵다.
+* 파일명 중복을 해결할 수 없다.
+  * 클래스나 리소스 명이 같은 경우 하나를 포기해야 한다. 이것은 심각한 문제를 발생한다. 예를 들어서 서블릿 컨테이너 초기화에서 학습한 부분을 떠올려 보자. 
+  * `META-INF/services/jakarta.servlet.ServletContainerInitializer` 이 파일이 여러 라이브러리( `jar` )에 있을 수 있다.
+  * `A` 라이브러리와 `B` 라이브러리 둘다 해당 파일을 사용해서 서블릿 컨테이너 초기화를 시도한다. 둘다 해당 파일을 `jar` 안에 포함한다.
+  * `Fat Jar` 를 만들면 파일명이 같으므로 `A` , `B` 라이브러리가 둘다 가지고 있는 파일 중에 하나의 파일만 선택된다. 결과적으로 나머지 하나는 포함되지 않으므로 정상 동작하지 않는다.
+
+## 편리한 부트 클래스 만들기
+
+지금까지 진행한 내장 톰캣 실행, 스프링 컨테이너 생성, 디스패처 서블릿 등록의 모든 과정을 편리하게 처리해주는 나만의 부트 클래스를 만들어보자. 
+
+부트는 이름 그대로 시작을 편하게 처리해주는 것을 뜻한다.
+
+
+
+
+
+
+
 
 
 
