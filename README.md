@@ -392,14 +392,93 @@ Fat Jar는 완벽해 보이지만 몇가지 단점을 여전히 포함하고 있
 
 부트는 이름 그대로 시작을 편하게 처리해주는 것을 뜻한다.
 
+```java
+public class MySpringApplication {
 
+    public static void run(Class configClass, String[] args) {
+        System.out.println("MySpringApplication.main args = " + List.of(args));
 
+        Tomcat tomcat = new Tomcat();
+        Connector connector = new Connector();
+        connector.setPort(8080);
+        tomcat.setConnector(connector);
 
+        //스프링 컨테이너 생성
+        AnnotationConfigWebApplicationContext appContext = new AnnotationConfigWebApplicationContext();
+        appContext.register(configClass);
 
+        //스프링 MVC 디스패처 서블릿 생성, 스프링 컨테이너 연결 : 이렇게 하면 서블릿이 스프링 컨테이너에 있는 controller를 찾아 연결시켜줌
+        DispatcherServlet dispatcherServlet = new DispatcherServlet(appContext);
 
+        //디스패처 서블릿 등록
+        //위에서 만든 서블릿을 서블릿 컨테이너에 넣는다.
+        Context context = tomcat.addContext("", "/");
+        tomcat.addServlet("", "dispatcher", dispatcherServlet);
+        context.addServletMappingDecoded("/", "dispatcher");
 
+        try {
+            tomcat.start();
+        } catch(LifecycleException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+```
 
+기존 코드를 모아서 편리하게 사용할 수 있는 클래스를 만들었다. 
 
+`MySpringApplication.run()` 을 실행하면 바로 작동한다.
 
+`configClass` : 스프링 설정을 파라미터로 전달받는다.
 
+`args` : `main(args)` 를 전달 받아서 사용한다. 
 
+참고로 예제에서는 단순히 해당 값을 출력한다. `tomcat.start()` 에서 발생하는 예외는 잡아서 런타임 예외로 변경했다.
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@ComponentScan
+public @interface MySpringBootApplication {}
+```
+
+```java
+@MySpringBootApplication
+public class MySpringBootMain {
+
+  public static void main(String[] args) {
+    System.out.println("MySpringBootMain.main");
+    MySpringApplication.run(MySpringBootMain.class, args);
+  }
+}
+```
+
+패키지 위치가 중요하다. `hello` 에 위치했다.
+
+여기에 위치한 이유는 `@MySpringBootApplication` 에 컴포넌트 스캔이 추가되어 있는데, 컴포넌트 스캔의 기본 동작은 해당 애노테이션이 붙은 클래스의 현재 패키지 부터 그 하위 패키지를 컴포넌트 스캔의 대상으로 사용하기 때문이다.
+
+애노테이션이 붙은 `hello.MySpringBootMain` 클래스의 패키지 위치는 `hello` 이 므로 그 하위의 `hello.spring.HelloController` 를 컴포넌트 스캔한다.
+
+`MySpringApplication.run(설정 정보, args)` 이렇게 한줄로 실행하면 된다.
+
+이 기능을 사용하는 개발자는 `@MySpringBootApplication` 애노테이션과 `MySpringApplication.run()` 메서드만 기억하면 된다.
+
+이렇게 하면 내장 톰캣 실행, 스프링 컨테이너 생성, 디스패처 서블릿, 컴포넌트 스캔까지 모든 기능이 한번에 편리하게 동작한다.
+
+**스프링 부트**
+
+지금까지 만든 것을 라이브러리로 만들어서 배포한다면? 그것이 바로 스프링부트이다.
+
+### **일반적인 스프링 부트 사용법**
+
+```java
+@SpringBootApplication
+public class BootApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(BootApplication.class, args);
+    } 
+}
+```
+
+스프링 부트는 보통 예제와 같이 `SpringApplication.run()` 한줄로 시작한다. 이제 본격적으로 스프링 부트를 사용해보자.
