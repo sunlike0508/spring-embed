@@ -482,3 +482,5 @@ public class BootApplication {
 ```
 
 스프링 부트는 보통 예제와 같이 `SpringApplication.run()` 한줄로 시작한다. 이제 본격적으로 스프링 부트를 사용해보자.
+
+[다음내용](https://github.com/sunlike0508/spring-lib)
